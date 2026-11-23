@@ -2,14 +2,14 @@
    LÓGICA DE LA APP · Taberna Itsas Txoko (demo)
    ÍNDICE
    1. Datos de ejemplo (la carta, INVENTADA)
-   2. Guardado en el móvil (localStorage)
+   2. Guardado y sincronización (nube o, si no hay, este navegador)
    3. Estado de la app
    4. Navegación entre secciones
    5. Carta
    6. Pedido
    7. Cocina
    8. Reservas
-   9. Arranque
+   9. Arranque (incluye la mesa que viene del QR)
    ===================================================== */
 
 /* 1. DATOS DE EJEMPLO ------------------------------------------------
@@ -43,16 +43,92 @@ const categorias = ["Todo", "Pintxos", "Raciones", "Platos", "Bebidas", "Postres
 const numeroDeMesas = 12;
 const horasReserva = ["13:00", "13:30", "14:00", "14:30", "20:30", "21:00", "21:30", "22:00"];
 
-/* 2. GUARDADO EN EL MÓVIL ---------------------------------------------
-   localStorage guarda texto en el propio navegador. Solo lo ve este
-   móvil. En la versión real, estas dos funciones enviarían los datos
-   a un servidor (base de datos) para que cocina los vea desde otro aparato. */
-function leerDatos(clave) {
-  return JSON.parse(localStorage.getItem(clave) || "[]");
+/* 2. GUARDADO Y SINCRONIZACIÓN ----------------------------------------
+   Los pedidos y las reservas se guardan en una "base de datos".
+   Hay dos modos, y la app elige sola según config.js:
+
+   - MODO NUBE: si en config.js hay una dirección, los datos van a una
+     base de datos de internet (Firebase Realtime Database, gratis).
+     Así la cocina ve al instante los pedidos de TODOS los móviles.
+   - MODO LOCAL: si config.js está vacío, se usa localStorage. Solo se
+     comparte entre pestañas del mismo navegador (sirve para probar).
+
+   Cada dato (un pedido, una reserva) se guarda con un identificador
+   único. La base de datos es como un árbol:
+       pedidos/ID_DEL_PEDIDO  -> { mesa, tipo, platos, total, ... }
+       reservas/ID_DE_LA_RESERVA -> { nombre, personas, ... }       */
+const urlNube = (typeof configuracionNube !== "undefined" && configuracionNube.urlBaseDeDatos || "").replace(/\/$/, "");
+const modoNube = urlNube !== "";
+
+/* Crea un identificador único: la hora (en base 36) + letras al azar */
+const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* Lee todos los datos de una colección ("pedidos" o "reservas")
+   y los devuelve como lista, de más antiguo a más nuevo */
+async function leerColeccion(nombre) {
+  let objeto;
+  if (modoNube) {
+    const respuesta = await fetch(`${urlNube}/${nombre}.json`);
+    objeto = (await respuesta.json()) || {};
+  } else {
+    objeto = JSON.parse(localStorage.getItem(nombre) || "{}");
+  }
+  return Object.entries(objeto)
+    .map(([id, dato]) => ({ id, ...dato }))
+    .sort((x, y) => x.creado - y.creado);
 }
-function guardarDatos(clave, valor) {
-  localStorage.setItem(clave, JSON.stringify(valor));
+
+/* Guarda (o sobrescribe) un dato con su identificador */
+async function guardarDato(nombre, id, dato) {
+  if (modoNube) {
+    await fetch(`${urlNube}/${nombre}/${id}.json`, { method: "PUT", body: JSON.stringify(dato) });
+  } else {
+    const objeto = JSON.parse(localStorage.getItem(nombre) || "{}");
+    objeto[id] = dato;
+    localStorage.setItem(nombre, JSON.stringify(objeto));
+  }
 }
+
+/* Cambia solo algunos campos de un dato (por ejemplo, servido: true) */
+async function actualizarDato(nombre, id, cambios) {
+  if (modoNube) {
+    await fetch(`${urlNube}/${nombre}/${id}.json`, { method: "PATCH", body: JSON.stringify(cambios) });
+  } else {
+    const objeto = JSON.parse(localStorage.getItem(nombre) || "{}");
+    objeto[id] = { ...objeto[id], ...cambios };
+    localStorage.setItem(nombre, JSON.stringify(objeto));
+  }
+}
+
+/* Borra una colección entera (botón "Borrar datos de la demo") */
+async function borrarColeccion(nombre) {
+  if (modoNube) await fetch(`${urlNube}/${nombre}.json`, { method: "DELETE" });
+  else localStorage.removeItem(nombre);
+}
+
+/* "Avísame cuando cambie algo": llama a la función que le pasemos
+   cada vez que hay datos nuevos, vengan de donde vengan. */
+function alCambiarDatos(funcion) {
+  if (modoNube) {
+    /* La base de datos nos avisa por una conexión abierta (EventSource) */
+    for (const nombre of ["pedidos", "reservas"]) {
+      const conexion = new EventSource(`${urlNube}/${nombre}.json`);
+      conexion.addEventListener("put", funcion);
+      conexion.addEventListener("patch", funcion);
+    }
+    /* Plan B por si la conexión se corta: preguntar cada 10 segundos */
+    setInterval(funcion, 10000);
+  } else {
+    /* "storage" se dispara cuando OTRA pestaña cambia el localStorage */
+    window.addEventListener("storage", funcion);
+  }
+}
+
+/* Los nombres de las reservas los escribe cualquiera: antes de pintarlos
+   en pantalla quitamos los caracteres especiales para que nadie pueda
+   colar código en la cocina. */
+const limpiar = (texto) => String(texto).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 /* 3. ESTADO DE LA APP ------------------------------------------------- */
 let pedidoActual = [];        // lista de { id, cantidad }
@@ -148,7 +224,7 @@ function pintarPedido() {
   el("contador-pedido").hidden = unidades === 0;
 }
 
-function enviarPedido() {
+async function enviarPedido() {
   const mensaje = el("mensaje-pedido");
   if (pedidoActual.length === 0) {
     mensaje.hidden = false;
@@ -157,10 +233,9 @@ function enviarPedido() {
     mensaje.textContent = "Añade algo a tu pedido antes de enviarlo.";
     return;
   }
-  /* Aquí se guarda el pedido. En la versión real: enviarlo a la base de datos. */
-  const pedidos = leerDatos("pedidos");
-  pedidos.push({
-    numero: pedidos.length + 1,
+  /* Guardamos el pedido con su identificador y la hora de creación */
+  await guardarDato("pedidos", nuevoId(), {
+    creado: Date.now(),
     mesa: el("selector-mesa").value,
     tipo: tipoPedido,
     hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
@@ -171,7 +246,6 @@ function enviarPedido() {
       return { nombre: p.nombre, cantidad: l.cantidad };
     })
   });
-  guardarDatos("pedidos", pedidos);
 
   pedidoActual = [];
   pintarPedido();
@@ -183,42 +257,40 @@ function enviarPedido() {
 }
 
 /* 7. COCINA ----------------------------------------------------------- */
-function pintarContadorCocina() {
-  const pendientes = leerDatos("pedidos").filter((p) => !p.servido).length;
+async function pintarContadorCocina() {
+  const pendientes = (await leerColeccion("pedidos")).filter((p) => !p.servido).length;
   el("contador-cocina").textContent = pendientes;
   el("contador-cocina").hidden = pendientes === 0;
 }
 
-function pintarCocina() {
-  const pedidos = leerDatos("pedidos");
+async function pintarCocina() {
+  const pedidos = await leerColeccion("pedidos");
+  /* El número del pedido es su posición: el más antiguo es el nº 1 */
   el("lista-cocina").innerHTML = pedidos.length === 0
     ? `<p class="vacio">No hay pedidos todavía.</p>`
-    : pedidos.slice().reverse().map((p) => `
+    : pedidos.map((p, i) => ({ ...p, numero: i + 1 })).reverse().map((p) => `
       <div class="ticket ${p.servido ? "servido" : ""}">
         <div class="ticket-cabecera">
-          <span class="ticket-mesa">Mesa ${p.mesa}${p.tipo === "llevar" ? '<span class="etiqueta-llevar">PARA LLEVAR</span>' : ""}</span>
-          <span class="ticket-hora">#${p.numero} · ${p.hora}</span>
+          <span class="ticket-mesa">Mesa ${limpiar(p.mesa)}${p.tipo === "llevar" ? '<span class="etiqueta-llevar">PARA LLEVAR</span>' : ""}</span>
+          <span class="ticket-hora">#${p.numero} · ${limpiar(p.hora)}</span>
         </div>
-        <ul>${p.platos.map((x) => `<li><b>${x.cantidad} ×</b> ${x.nombre}</li>`).join("")}</ul>
+        <ul>${p.platos.map((x) => `<li><b>${x.cantidad} ×</b> ${limpiar(x.nombre)}</li>`).join("")}</ul>
         ${p.servido
           ? "<strong class=\"texto-servido\">Servido</strong>"
-          : `<button class="boton-servido" data-servido="${p.numero}">Marcar como servido</button>`}
+          : `<button class="boton-servido" data-servido="${p.id}">Marcar como servido</button>`}
       </div>`).join("");
 
-  const reservas = leerDatos("reservas");
+  const reservas = await leerColeccion("reservas");
   el("lista-reservas-cocina").innerHTML = reservas.length === 0
     ? `<p class="vacio">No hay reservas todavía.</p>`
     : reservas.map((r) => `
-      <div class="reserva-tarjeta"><strong>${r.nombre}</strong> · ${r.personas} pers.<br>
-      ${r.dia} a las ${r.hora}</div>`).join("");
+      <div class="reserva-tarjeta"><strong>${limpiar(r.nombre)}</strong> · ${limpiar(r.personas)} pers.<br>
+      ${limpiar(r.dia)} a las ${limpiar(r.hora)}</div>`).join("");
   pintarContadorCocina();
 }
 
-function marcarServido(numero) {
-  const pedidos = leerDatos("pedidos");
-  const pedido = pedidos.find((p) => p.numero === numero);
-  pedido.servido = true;
-  guardarDatos("pedidos", pedidos);
+async function marcarServido(id) {
+  await actualizarDato("pedidos", id, { servido: true });
   pintarCocina();
 }
 
@@ -233,7 +305,7 @@ function prepararFormularioReserva() {
   el("reserva-dia").value = hoy;
 }
 
-function guardarReserva(evento) {
+async function guardarReserva(evento) {
   evento.preventDefault(); // evita que la página se recargue
   const reserva = {
     nombre: el("reserva-nombre").value.trim(),
@@ -241,14 +313,12 @@ function guardarReserva(evento) {
     dia: new Date(el("reserva-dia").value + "T12:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }),
     hora: el("reserva-hora").value
   };
-  /* Aquí se guarda la reserva. En la versión real: base de datos + aviso al bar. */
-  const reservas = leerDatos("reservas");
-  reservas.push(reserva);
-  guardarDatos("reservas", reservas);
+  reserva.creado = Date.now();
+  await guardarDato("reservas", nuevoId(), reserva);
 
   const caja = el("confirmacion-reserva");
   caja.hidden = false;
-  caja.innerHTML = `<strong>Reserva confirmada</strong><br>${reserva.nombre}, mesa para ${reserva.personas} el ${reserva.dia} a las ${reserva.hora}.`;
+  caja.innerHTML = `<strong>Reserva confirmada</strong><br>${limpiar(reserva.nombre)}, mesa para ${reserva.personas} el ${reserva.dia} a las ${reserva.hora}.`;
   el("formulario-reserva").reset();
   prepararFormularioReserva();
 }
@@ -269,7 +339,7 @@ function iniciar() {
     if (b.dataset.mas) cambiarCantidad(Number(b.dataset.mas), 1);
     if (b.dataset.menos) cambiarCantidad(Number(b.dataset.menos), -1);
     if (b.dataset.quitar) quitarDelPedido(Number(b.dataset.quitar));
-    if (b.dataset.servido) marcarServido(Number(b.dataset.servido));
+    if (b.dataset.servido) marcarServido(b.dataset.servido);
     if (b.dataset.tipo) {
       tipoPedido = b.dataset.tipo;
       document.querySelectorAll(".boton-tipo").forEach((x) => x.classList.toggle("activo", x === b));
@@ -277,11 +347,25 @@ function iniciar() {
   });
   el("boton-enviar").addEventListener("click", enviarPedido);
   el("formulario-reserva").addEventListener("submit", guardarReserva);
-  el("boton-borrar-demo").addEventListener("click", () => {
-    localStorage.removeItem("pedidos");
-    localStorage.removeItem("reservas");
+  el("boton-borrar-demo").addEventListener("click", async () => {
+    await borrarColeccion("pedidos");
+    await borrarColeccion("reservas");
     pintarCocina();
   });
+
+  /* Mesa que viene del QR: la dirección es ".../?mesa=5".
+     Si existe, dejamos esa mesa elegida al abrir la app. */
+  const mesaDelQr = Number(new URLSearchParams(location.search).get("mesa"));
+  if (mesaDelQr >= 1 && mesaDelQr <= numeroDeMesas) el("selector-mesa").value = mesaDelQr;
+  /* Y ".../?cocina" abre directamente la vista de cocina */
+  const abrirCocina = new URLSearchParams(location.search).has("cocina");
+
+  /* Cuando cambian los datos (otro móvil, otra pestaña), repintamos cocina */
+  alCambiarDatos(() => {
+    pintarContadorCocina();
+    if (el("seccion-cocina").classList.contains("activa")) pintarCocina();
+  });
+  if (abrirCocina) mostrarSeccion("cocina");
 
   pintarFiltros();
   pintarCarta();
