@@ -26,6 +26,7 @@
       <span>Has escaneado el QR de la</span>
       <select id="selector-mesa"></select>
     </label>
+    <button id="boton-cerrar-sesion" class="boton-cerrar-sesion" hidden>Cerrar sesión del personal</button>
   </header>
 
   <main>
@@ -55,7 +56,7 @@
     <!-- ===== 4. RESERVAS ===== -->
     <section id="seccion-reservas" class="seccion">
       <h2>Reserva tu mesa</h2>
-      <p class="ayuda">Sin llamadas: rellena los datos y listo.</p>
+      <p class="ayuda">Sin llamadas: rellena los datos y el bar te confirma por teléfono.</p>
       <form id="formulario-reserva" class="formulario">
         <label>Nombre
           <input type="text" id="reserva-nombre" placeholder="Tu nombre" required>
@@ -74,14 +75,14 @@
             <select id="reserva-hora"></select>
           </label>
         </div>
-        <button type="submit" class="boton-principal">Reservar mesa</button>
+        <button type="submit" id="boton-reservar" class="boton-principal">Reservar mesa</button>
       </form>
       <div id="confirmacion-reserva" class="confirmacion" hidden></div>
       <!-- Solo la vista de personal (?sala) muestra esta lista:
            los QR de las mesas abren la vista de cliente, sin ella. -->
       <div id="bloque-reservas-recibidas" hidden>
         <h3>Reservas recibidas</h3>
-        <p class="ayuda">Zona del personal de sala: aquí llegan las reservas de los clientes.</p>
+        <p class="ayuda">Zona del personal de sala: aquí llegan las reservas de los clientes, pendientes de aceptar.</p>
         <div id="lista-reservas-sala"></div>
       </div>
     </section>
@@ -103,7 +104,24 @@
 
   </main>
 
-  <!-- ===== 7. NAVEGACIÓN INFERIOR ===== -->
+  <!-- ===== 7. ACCESO DEL PERSONAL (se muestra encima cuando hace falta) ===== -->
+  <div id="acceso-personal" class="acceso-fondo" hidden>
+    <form id="formulario-acceso" class="acceso-panel">
+      <h2>Personal</h2>
+      <p class="ayuda">Sala y cocina entran con su correo y contraseña. Los clientes no necesitan cuenta.</p>
+      <label>Correo
+        <input type="email" id="acceso-correo" autocomplete="username" required>
+      </label>
+      <label>Contraseña
+        <input type="password" id="acceso-contrasena" autocomplete="current-password" required>
+      </label>
+      <p id="mensaje-acceso" class="mensaje-acceso" hidden></p>
+      <button type="submit" id="boton-entrar" class="boton-principal">Entrar</button>
+      <button type="button" id="boton-volver-acceso" class="boton-secundario">Volver a la carta</button>
+    </form>
+  </div>
+
+  <!-- ===== 8. NAVEGACIÓN INFERIOR ===== -->
   <nav class="navegacion">
     <button class="boton-nav activo" data-seccion="carta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 21V5"/></svg>Carta</button>
     <button class="boton-nav" data-seccion="pedido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 016 0"/></svg>Pedido<i id="contador-pedido" hidden>0</i></button>
