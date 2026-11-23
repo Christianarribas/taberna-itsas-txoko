@@ -13,6 +13,15 @@
 </head>
 <body>
 
+  <!-- Aviso para sala y cocina cuando abren su enlace DENTRO de otra app
+       (WhatsApp, Instagram…). Por si ahí la sesión no se conserva bien,
+       enseña los pasos para abrirlo en el navegador habitual. Se muestra
+       solo en ese caso (lo decide app.js). -->
+  <div id="aviso-navegador-app" class="aviso-navegador-app" hidden>
+    Parece que has abierto esto desde otra aplicación (como WhatsApp). Si te pide la contraseña muy a menudo, prueba a abrirlo en tu navegador habitual: en el menú <strong>⋮</strong> de arriba suele estar <strong>«Abrir en el navegador»</strong> (en iPhone, el icono de Safari).<br>
+    Ya en el navegador, con <strong>«Añadir a pantalla de inicio»</strong> tendrás un icono para entrar directo.
+  </div>
+
   <!-- ===== 1. CABECERA: nombre del bar y selector de mesa (simula el QR) ===== -->
   <header class="cabecera">
     <div class="cabecera-titulo">
