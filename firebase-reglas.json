@@ -7,23 +7,23 @@
       ".write": false
     },
     "pedidos": {
-      ".read": "(auth != null && root.child('personal/' + auth.uid + '/rol').val() != null)",
+      ".read": "(auth != null && root.child('personal/' + auth.uid).val() != null)",
       "$id": {
-        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid + '/rol').val() != null) || !data.exists())",
-        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid + '/rol').val() != null) || (!data.exists() && newData.hasChildren(['creado','mesa','tipo','platos','total','hora','firma']) && newData.child('listo').val() == false && newData.child('servido').val() == false)",
-        "listo": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'cocina')" },
-        "servido": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')" },
+        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid).val() != null) || !data.exists())",
+        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid).val() != null) || (!data.exists() && newData.hasChildren(['creado','mesa','tipo','platos','total','hora','firma']) && newData.child('listo').val() == false && newData.child('servido').val() == false)",
+        "listo": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid).val() == 'cocina')" },
+        "servido": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid).val() == 'sala')" },
         "platos": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.hasChildren())" },
         "firma": { ".read": true, ".validate": "newData.val() == data.val() || !data.exists()" },
         "$otro": { ".validate": "newData.val() == data.val() || !data.exists()" }
       }
     },
     "reservas": {
-      ".read": "(auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')",
+      ".read": "(auth != null && root.child('personal/' + auth.uid).val() == 'sala')",
       "$id": {
-        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala') || !data.exists())",
-        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala') || (!data.exists() && newData.hasChildren(['nombre','telefono','personas','dia','hora','creado','estado','firma']) && newData.child('estado').val() == 'pendiente' && newData.child('nombre').isString() && newData.child('nombre').val().length <= 60 && newData.child('telefono').isString() && newData.child('telefono').val().length <= 20)",
-        "estado": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == 'pendiente') || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')" },
+        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid).val() == 'sala') || !data.exists())",
+        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid).val() == 'sala') || (!data.exists() && newData.hasChildren(['nombre','telefono','personas','dia','hora','creado','estado','firma']) && newData.child('estado').val() == 'pendiente' && newData.child('nombre').isString() && newData.child('nombre').val().length <= 60 && newData.child('telefono').isString() && newData.child('telefono').val().length <= 20)",
+        "estado": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == 'pendiente') || (auth != null && root.child('personal/' + auth.uid).val() == 'sala')" },
         "firma": { ".read": true, ".validate": "newData.val() == data.val() || !data.exists()" },
         "$otro": { ".validate": "newData.val() == data.val() || !data.exists()" }
       }
