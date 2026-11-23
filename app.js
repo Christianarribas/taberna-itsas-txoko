@@ -141,12 +141,17 @@ const formatoPrecio = (n) => n.toFixed(2).replace(".", ",") + " €";
 
 /* 4. NAVEGACIÓN ENTRE SECCIONES --------------------------------------- */
 function mostrarSeccion(nombre) {
+  /* Cocina solo se abre con su dirección, y Comandas solo con la de sala */
+  if (nombre === "cocina" && !document.body.classList.contains("vista-cocina")) return;
+  if (nombre === "comandas" && !document.body.classList.contains("vista-sala")) return;
   document.querySelectorAll(".seccion").forEach((s) => s.classList.remove("activa"));
   el("seccion-" + nombre).classList.add("activa");
   document.querySelectorAll(".boton-nav").forEach((b) => {
     b.classList.toggle("activo", b.dataset.seccion === nombre);
   });
   if (nombre === "cocina") pintarCocina();
+  if (nombre === "reservas") pintarReservas();
+  if (nombre === "comandas") pintarComandasSala();
   window.scrollTo(0, 0);
 }
 
@@ -241,6 +246,7 @@ async function enviarPedido() {
     hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
     total: calcularTotal(),
     servido: false,
+    listo: false,
     platos: pedidoActual.map((l) => {
       const p = carta.find((x) => x.id === l.id);
       return { nombre: p.nombre, cantidad: l.cantidad };
@@ -258,9 +264,16 @@ async function enviarPedido() {
 
 /* 7. COCINA ----------------------------------------------------------- */
 async function pintarContadorCocina() {
-  const pendientes = (await leerColeccion("pedidos")).filter((p) => !p.servido).length;
+  const pendientes = (await leerColeccion("pedidos")).filter((p) => !p.listo).length;
   el("contador-cocina").textContent = pendientes;
   el("contador-cocina").hidden = pendientes === 0;
+}
+
+/* Aviso para sala: comandas que cocina ya tiene listas y aún no se han servido */
+async function pintarContadorComandas() {
+  const listas = (await leerColeccion("pedidos")).filter((p) => p.listo && !p.servido).length;
+  el("contador-comandas").textContent = listas;
+  el("contador-comandas").hidden = listas === 0;
 }
 
 async function pintarCocina() {
@@ -277,21 +290,57 @@ async function pintarCocina() {
         <ul>${p.platos.map((x) => `<li><b>${x.cantidad} ×</b> ${limpiar(x.nombre)}</li>`).join("")}</ul>
         ${p.servido
           ? "<strong class=\"texto-servido\">Servido</strong>"
-          : `<button class="boton-servido" data-servido="${p.id}">Marcar como servido</button>`}
+          : p.listo
+            ? "<strong class=\"texto-servido\">Lista para servir</strong>"
+            : `<button class="boton-servido" data-listo="${p.id}">Marcar como lista</button>`}
       </div>`).join("");
 
+  pintarContadorCocina();
+}
+
+/* Las reservas las consulta el personal de sala, en su sección.
+   Cocina no las ve: solo le llegan las comandas. */
+async function pintarReservas() {
   const reservas = await leerColeccion("reservas");
-  el("lista-reservas-cocina").innerHTML = reservas.length === 0
+  el("lista-reservas-sala").innerHTML = reservas.length === 0
     ? `<p class="vacio">No hay reservas todavía.</p>`
     : reservas.map((r) => `
-      <div class="reserva-tarjeta"><strong>${limpiar(r.nombre)}</strong> · ${limpiar(r.personas)} pers.<br>
+      <div class="reserva-tarjeta"><strong>${limpiar(r.nombre)}</strong> · ${limpiar(r.personas)} pers.${r.telefono ? ` · ${limpiar(r.telefono)}` : ""}<br>
       ${limpiar(r.dia)} a las ${limpiar(r.hora)}</div>`).join("");
-  pintarContadorCocina();
+}
+
+async function marcarListo(id) {
+  await actualizarDato("pedidos", id, { listo: true });
+  pintarCocina();
+  pintarContadorComandas();
 }
 
 async function marcarServido(id) {
   await actualizarDato("pedidos", id, { servido: true });
-  pintarCocina();
+  pintarComandasSala();
+  pintarContadorComandas();
+}
+
+/* Sala ve todas las comandas sin entrar en cocina: en preparación,
+   listas para servir (con aviso) y servidas. */
+async function pintarComandasSala() {
+  const pedidos = await leerColeccion("pedidos");
+  el("lista-comandas-sala").innerHTML = pedidos.length === 0
+    ? `<p class="vacio">No hay comandas todavía.</p>`
+    : pedidos.map((p, i) => ({ ...p, numero: i + 1 })).reverse().map((p) => `
+      <div class="ticket ${p.servido ? "servido" : ""}">
+        <div class="ticket-cabecera">
+          <span class="ticket-mesa">Mesa ${limpiar(p.mesa)}${p.tipo === "llevar" ? '<span class="etiqueta-llevar">PARA LLEVAR</span>' : ""}</span>
+          <span class="ticket-hora">#${p.numero} · ${limpiar(p.hora)}</span>
+        </div>
+        <ul>${p.platos.map((x) => `<li><b>${x.cantidad} ×</b> ${limpiar(x.nombre)}</li>`).join("")}</ul>
+        ${p.servido
+          ? "<strong class=\"texto-servido\">Servido</strong>"
+          : p.listo
+            ? `<strong class="texto-listo">Lista para servir</strong><button class="boton-servido" data-servido="${p.id}">Marcar como servida</button>`
+            : "<span class=\"texto-encocina\">En cocina…</span>"}
+      </div>`).join("");
+  pintarContadorComandas();
 }
 
 /* 8. RESERVAS --------------------------------------------------------- */
@@ -309,6 +358,7 @@ async function guardarReserva(evento) {
   evento.preventDefault(); // evita que la página se recargue
   const reserva = {
     nombre: el("reserva-nombre").value.trim(),
+    telefono: el("reserva-telefono").value.trim(),
     personas: el("reserva-personas").value,
     dia: new Date(el("reserva-dia").value + "T12:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }),
     hora: el("reserva-hora").value
@@ -340,6 +390,7 @@ function iniciar() {
     if (b.dataset.menos) cambiarCantidad(Number(b.dataset.menos), -1);
     if (b.dataset.quitar) quitarDelPedido(Number(b.dataset.quitar));
     if (b.dataset.servido) marcarServido(b.dataset.servido);
+    if (b.dataset.listo) marcarListo(b.dataset.listo);
     if (b.dataset.tipo) {
       tipoPedido = b.dataset.tipo;
       document.querySelectorAll(".boton-tipo").forEach((x) => x.classList.toggle("activo", x === b));
@@ -351,26 +402,52 @@ function iniciar() {
     await borrarColeccion("pedidos");
     await borrarColeccion("reservas");
     pintarCocina();
+    pintarReservas();
   });
+
+  /* Tres entradas separadas:
+     - CLIENTE (la dirección normal, y los QR con ?mesa=N): carta, pedido
+       y el formulario de reservas. No ve cocina ni las reservas ajenas.
+     - PERSONAL DE SALA (la dirección con ?sala): lo mismo, más la lista
+       de reservas recibidas.
+     - COCINA (la dirección con ?cocina): solo las comandas, sin carta,
+       sin pedido, sin reservas y sin barra de navegación.
+     Ojo: son separaciones de pantalla, no cerraduras. Las direcciones no
+     son secretas y la base de datos de la demo se puede leer y escribir
+     con su enlace. Para privacidad de verdad haría falta iniciar sesión
+     (Firebase Auth). */
+  const esCocina = new URLSearchParams(location.search).has("cocina");
+  const esSala = new URLSearchParams(location.search).has("sala");
+  if (esCocina) {
+    document.body.classList.add("vista-cocina");
+    mostrarSeccion("cocina");
+  } else {
+    document.querySelector('[data-seccion="cocina"]').hidden = true;
+    if (esSala) {
+      document.body.classList.add("vista-sala");
+      el("bloque-reservas-recibidas").hidden = false;
+      document.querySelector('[data-seccion="comandas"]').hidden = false;
+    }
+  }
 
   /* Mesa que viene del QR: la dirección es ".../?mesa=5".
      Si existe, dejamos esa mesa elegida al abrir la app. */
   const mesaDelQr = Number(new URLSearchParams(location.search).get("mesa"));
   if (mesaDelQr >= 1 && mesaDelQr <= numeroDeMesas) el("selector-mesa").value = mesaDelQr;
-  /* Y ".../?cocina" abre directamente la vista de cocina */
-  const abrirCocina = new URLSearchParams(location.search).has("cocina");
 
   /* Cuando cambian los datos (otro móvil, otra pestaña), repintamos cocina */
   alCambiarDatos(() => {
     pintarContadorCocina();
+    pintarContadorComandas();
     if (el("seccion-cocina").classList.contains("activa")) pintarCocina();
+    if (el("seccion-reservas").classList.contains("activa")) pintarReservas();
+    if (el("seccion-comandas").classList.contains("activa")) pintarComandasSala();
   });
-  if (abrirCocina) mostrarSeccion("cocina");
-
   pintarFiltros();
   pintarCarta();
   pintarPedido();
   prepararFormularioReserva();
   pintarContadorCocina();
+  pintarContadorComandas();
 }
 iniciar();
