@@ -226,6 +226,7 @@ function avisarError(texto) {
    tablet de cocina no pidan la contraseña cada vez que se abre la app. */
 const claveApi = (typeof configuracionNube !== "undefined" && configuracionNube.claveApi) || "";
 let sesion = null; // { idToken, tokenRefresco, caduca }
+let seccionPendiente = null; // sección que el personal quería ver al pedirle la contraseña
 
 function cargarSesion() {
   try { sesion = JSON.parse(localStorage.getItem("sesionTaberna") || "null"); }
@@ -247,15 +248,36 @@ async function iniciarSesion(correo, contrasena) {
   localStorage.setItem("sesionTaberna", JSON.stringify(sesion));
 }
 
-/* La credencial dura una hora; se renueva sola cuando hace falta */
+/* La credencial dura una hora; se renueva sola cuando hace falta.
+   Importante: un fallo pasajero (sin cobertura, servicio ocupado) NO debe
+   borrar la sesión; solo se cierra si la credencial quedó inválida de
+   verdad. Así el personal no tiene que meter la contraseña a cada rato. */
 async function tokenDelPersonal() {
   if (!modoNube || !sesion || !claveApi) return null;
   if (Date.now() < sesion.caduca) return sesion.idToken;
-  const respuesta = await fetch(`https://securetoken.googleapis.com/v1/token?key=${claveApi}`, {
-    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `grant_type=refresh_token&refresh_token=${sesion.tokenRefresco}`
-  });
-  if (!respuesta.ok) { cerrarSesion(); return null; }
+  let respuesta;
+  try {
+    respuesta = await fetch(`https://securetoken.googleapis.com/v1/token?key=${claveApi}`, {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=refresh_token&refresh_token=${sesion.tokenRefresco}`
+    });
+  } catch (e) {
+    /* Sin conexión: la sesión se conserva y se renueva en el próximo intento */
+    const error = new Error("sin conexión");
+    error.estado = 0;
+    throw error;
+  }
+  if (!respuesta.ok) {
+    let codigo = "";
+    try { codigo = ((await respuesta.json()).error || {}).message || ""; } catch (e) {}
+    if (/TOKEN_EXPIRED|INVALID_REFRESH_TOKEN|USER_DISABLED|EMAIL_NOT_FOUND/.test(codigo)) {
+      cerrarSesion();
+      return null;
+    }
+    const error = new Error("no se pudo renovar la sesión");
+    error.estado = respuesta.status;
+    throw error;
+  }
   const datos = await respuesta.json();
   sesion.idToken = datos.id_token;
   sesion.tokenRefresco = datos.refresh_token;
@@ -270,6 +292,14 @@ function cerrarSesion() {
   conexionesNube.forEach((c) => c.close());
   conexionesNube = [];
   location.reload();
+}
+
+/* Detecta si la página se ha abierto DENTRO de otra app (WhatsApp,
+   Instagram, TikTok…). En ese caso mostramos un aviso con los pasos
+   para abrirla en el navegador habitual, por si ahí la sesión no se
+   conserva bien (ver #aviso-navegador-app). */
+function esNavegadorDeUnaApp() {
+  return /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Telegram|TikTok|Snapchat|Line\//i.test(navigator.userAgent || "");
 }
 
 /* Panel de entrada del personal: se muestra encima cuando hace falta */
@@ -291,6 +321,10 @@ async function enviarAcceso(evento) {
     await iniciarSesion(el("acceso-correo").value.trim(), el("acceso-contrasena").value);
     el("acceso-personal").hidden = true;
     arrancarPersonal();
+    /* Lleva al personal a la sección que quería ver al pedirle la contraseña */
+    const destino = seccionPendiente;
+    seccionPendiente = null;
+    if (destino) mostrarSeccion(destino);
   } catch (e) {
     mensaje.hidden = false;
     mensaje.textContent = "No se pudo entrar. Revisa el correo y la contraseña.";
@@ -352,6 +386,7 @@ function mostrarSeccion(nombre) {
   if (nombre === "comandas" && !document.body.classList.contains("vista-sala")) return;
   /* Las secciones del personal piden sesión en la nube */
   if ((nombre === "cocina" || nombre === "comandas") && modoNube && !sesion) {
+    seccionPendiente = nombre; // tras entrar, le llevamos aquí directamente
     mostrarAcceso();
     return;
   }
@@ -840,7 +875,7 @@ function iniciar() {
   el("formulario-reserva").addEventListener("submit", guardarReserva);
   el("reserva-dia").addEventListener("change", pintarHorasReserva);
   el("formulario-acceso").addEventListener("submit", enviarAcceso);
-  el("boton-volver-acceso").addEventListener("click", () => { el("acceso-personal").hidden = true; });
+  el("boton-volver-acceso").addEventListener("click", () => { seccionPendiente = null; el("acceso-personal").hidden = true; });
   el("boton-cerrar-sesion").addEventListener("click", cerrarSesion);
   /* El botón de borrar datos solo existe en MODO LOCAL. En la nube los
      borrados se hacen desde la consola de Firebase: las reglas no permiten
@@ -889,6 +924,11 @@ function iniciar() {
       document.querySelector('[data-seccion="comandas"]').hidden = false;
     }
   }
+
+  /* Si el personal abre su enlace dentro de WhatsApp u otra app, le
+     enseñamos cómo abrirlo en su navegador habitual por si la sesión
+     no se conserva bien ahí */
+  if ((esCocina || esSala) && esNavegadorDeUnaApp()) el("aviso-navegador-app").hidden = false;
 
   /* Mesa que viene del QR: la dirección es ".../?mesa=5".
      Si existe, dejamos esa mesa elegida al abrir la app. */
