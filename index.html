@@ -79,7 +79,7 @@
     <!-- ===== 5. COCINA (vista del personal) ===== -->
     <section id="seccion-cocina" class="seccion">
       <h2>Vista de cocina</h2>
-      <p class="ayuda">Pedidos entrantes en tiempo real (demo en este mismo móvil).</p>
+      <p class="ayuda">Pedidos y reservas en tiempo real, desde todos los móviles.</p>
       <div id="lista-cocina"></div>
       <h3>Reservas</h3>
       <div id="lista-reservas-cocina"></div>
@@ -96,6 +96,8 @@
     <button class="boton-nav" data-seccion="cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14a4 4 0 01-1-7.8 4.5 4.5 0 018.6-1A4 4 0 0117 14v5H7z"/><path d="M7 17h10"/></svg>Cocina<i id="contador-cocina" hidden>0</i></button>
   </nav>
 
+  <!-- config.js dice dónde se guardan los pedidos (nube o este navegador) -->
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
