@@ -179,6 +179,8 @@ h3 { font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-pr
   background: var(--color-ok); color: #fff; font-weight: 600;
 }
 .texto-servido { color: var(--color-ok); }
+.texto-listo { color: var(--color-ok); display: block; margin-top: 6px; font-size: .82rem; }
+.texto-encocina { color: var(--color-suave); font-size: .85rem; }
 .etiqueta-llevar {
   background: var(--color-acento); color: #fff; font-family: var(--fuente-texto);
   font-size: .62rem; letter-spacing: 1px; padding: 3px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle;
@@ -202,6 +204,14 @@ h3 { font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-pr
   font-style: normal; font-size: .65rem; font-weight: 600; min-width: 17px; height: 17px; border-radius: 99px;
   display: grid; place-items: center; padding: 0 4px;
 }
+
+/* 8b. VISTAS SEPARADAS: sala y cocina
+   - En sala, app.js oculta la pestaña de cocina con "hidden".
+   - En cocina (?cocina) solo se ven las comandas: ni selector de mesa
+     ni barra de navegación. */
+.vista-cocina .selector-mesa { display: none; }
+.vista-cocina .navegacion { display: none; }
+.vista-cocina { padding-bottom: 24px; }
 
 /* 9. PANTALLAS GRANDES (ordenador): solo centramos la app */
 @media (min-width: 600px) {
