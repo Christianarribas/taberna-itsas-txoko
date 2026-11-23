@@ -2,22 +2,30 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "personal": {
+      ".read": false,
+      ".write": false
+    },
     "pedidos": {
-      ".read": true,
-      ".write": true,
+      ".read": "(auth != null && root.child('personal/' + auth.uid + '/rol').val() != null)",
       "$id": {
-        ".write": true,
-        ".validate": "newData.hasChildren(['creado','mesa','tipo','platos','total','servido']) || newData.hasChild('servido')",
-        "platos": { ".validate": "newData.val() == null || newData.hasChildren()" },
-        "$otro": { ".validate": true }
+        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid + '/rol').val() != null) || !data.exists())",
+        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid + '/rol').val() != null) || (!data.exists() && newData.hasChildren(['creado','mesa','tipo','platos','total','hora','firma']) && newData.child('listo').val() == false && newData.child('servido').val() == false)",
+        "listo": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'cocina')" },
+        "servido": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == false) || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')" },
+        "platos": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.hasChildren())" },
+        "firma": { ".read": true, ".validate": "newData.val() == data.val() || !data.exists()" },
+        "$otro": { ".validate": "newData.val() == data.val() || !data.exists()" }
       }
     },
     "reservas": {
-      ".read": true,
-      ".write": true,
+      ".read": "(auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')",
       "$id": {
-        ".write": true,
-        ".validate": "newData.hasChildren(['nombre','telefono','personas','dia','hora','creado']) && newData.child('nombre').val().length <= 60 && newData.child('telefono').val().length <= 20"
+        ".write": "newData.exists() && ((auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala') || !data.exists())",
+        ".validate": "(data.exists() && auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala') || (!data.exists() && newData.hasChildren(['nombre','telefono','personas','dia','hora','creado','estado','firma']) && newData.child('estado').val() == 'pendiente' && newData.child('nombre').isString() && newData.child('nombre').val().length <= 60 && newData.child('telefono').isString() && newData.child('telefono').val().length <= 20)",
+        "estado": { ".validate": "newData.val() == data.val() || (!data.exists() && newData.val() == 'pendiente') || (auth != null && root.child('personal/' + auth.uid + '/rol').val() == 'sala')" },
+        "firma": { ".read": true, ".validate": "newData.val() == data.val() || !data.exists()" },
+        "$otro": { ".validate": "newData.val() == data.val() || !data.exists()" }
       }
     }
   }
