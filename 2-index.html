@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taberna Itsas Txoko · Carta, pedidos y reservas</title>
+  <meta name="theme-color" content="#14262e">
+  <!-- Tipografías de Google Fonts (opcional): si no hay internet, el navegador usa Georgia y la fuente del sistema -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== 1. CABECERA: nombre del bar y selector de mesa (simula el QR) ===== -->
+  <header class="cabecera">
+    <div class="cabecera-titulo">
+      <span class="cabecera-icono">IT</span>
+      <div>
+        <h1>Taberna Itsas Txoko</h1>
+        <p class="cabecera-lema">Pintxos y cocina de mercado</p>
+      </div>
+    </div>
+    <label class="selector-mesa">
+      <span>Has escaneado el QR de la</span>
+      <select id="selector-mesa"></select>
+    </label>
+  </header>
+
+  <main>
+
+    <!-- ===== 2. CARTA ===== -->
+    <section id="seccion-carta" class="seccion activa">
+      <div id="filtros-categoria" class="filtros"></div>
+      <div id="lista-carta" class="lista-carta"></div>
+    </section>
+
+    <!-- ===== 3. PEDIDO ===== -->
+    <section id="seccion-pedido" class="seccion">
+      <h2>Tu pedido</h2>
+      <div class="tipo-pedido">
+        <button class="boton-tipo activo" data-tipo="mesa">En la mesa</button>
+        <button class="boton-tipo" data-tipo="llevar">Para llevar</button>
+      </div>
+      <div id="lista-pedido"></div>
+      <div class="total-caja">
+        <span>Total</span>
+        <strong id="total-pedido">0,00 €</strong>
+      </div>
+      <button id="boton-enviar" class="boton-principal">Enviar pedido a cocina</button>
+      <p id="mensaje-pedido" class="mensaje" hidden></p>
+    </section>
+
+    <!-- ===== 4. RESERVAS ===== -->
+    <section id="seccion-reservas" class="seccion">
+      <h2>Reserva tu mesa</h2>
+      <p class="ayuda">Sin llamadas: rellena los datos y listo.</p>
+      <form id="formulario-reserva" class="formulario">
+        <label>Nombre
+          <input type="text" id="reserva-nombre" placeholder="Tu nombre" required>
+        </label>
+        <label>Teléfono
+          <input type="tel" id="reserva-telefono" placeholder="600 123 456" inputmode="tel" required>
+        </label>
+        <label>Personas
+          <select id="reserva-personas"></select>
+        </label>
+        <div class="fila-doble">
+          <label>Día
+            <input type="date" id="reserva-dia" required>
+          </label>
+          <label>Hora
+            <select id="reserva-hora"></select>
+          </label>
+        </div>
+        <button type="submit" class="boton-principal">Reservar mesa</button>
+      </form>
+      <div id="confirmacion-reserva" class="confirmacion" hidden></div>
+      <!-- Solo la vista de personal (?sala) muestra esta lista:
+           los QR de las mesas abren la vista de cliente, sin ella. -->
+      <div id="bloque-reservas-recibidas" hidden>
+        <h3>Reservas recibidas</h3>
+        <p class="ayuda">Zona del personal de sala: aquí llegan las reservas de los clientes.</p>
+        <div id="lista-reservas-sala"></div>
+      </div>
+    </section>
+
+    <!-- ===== 5. COMANDAS DE SALA (vista del personal, ?sala) ===== -->
+    <section id="seccion-comandas" class="seccion">
+      <h2>Comandas</h2>
+      <p class="ayuda">Las mesas en tiempo real: cuando cocina marca una comanda como lista, aquí aparece el aviso.</p>
+      <div id="lista-comandas-sala"></div>
+    </section>
+
+    <!-- ===== 6. COCINA (vista del personal) ===== -->
+    <section id="seccion-cocina" class="seccion">
+      <h2>Vista de cocina</h2>
+      <p class="ayuda">Comandas en tiempo real, desde todos los móviles.</p>
+      <div id="lista-cocina"></div>
+      <button id="boton-borrar-demo" class="boton-secundario">Borrar datos de la demo</button>
+    </section>
+
+  </main>
+
+  <!-- ===== 7. NAVEGACIÓN INFERIOR ===== -->
+  <nav class="navegacion">
+    <button class="boton-nav activo" data-seccion="carta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 21V5"/></svg>Carta</button>
+    <button class="boton-nav" data-seccion="pedido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 016 0"/></svg>Pedido<i id="contador-pedido" hidden>0</i></button>
+    <button class="boton-nav" data-seccion="reservas"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Reservas</button>
+    <button class="boton-nav" data-seccion="comandas" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Comandas<i id="contador-comandas" hidden>0</i></button>
+    <button class="boton-nav" data-seccion="cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14a4 4 0 01-1-7.8 4.5 4.5 0 018.6-1A4 4 0 0117 14v5H7z"/><path d="M7 17h10"/></svg>Cocina<i id="contador-cocina" hidden>0</i></button>
+  </nav>
+
+  <!-- config.js dice dónde se guardan los pedidos (nube o este navegador) -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
