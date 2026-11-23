@@ -60,6 +60,9 @@
         <label>Nombre
           <input type="text" id="reserva-nombre" placeholder="Tu nombre" required>
         </label>
+        <label>Teléfono
+          <input type="tel" id="reserva-telefono" placeholder="600 123 456" inputmode="tel" required>
+        </label>
         <label>Personas
           <select id="reserva-personas"></select>
         </label>
@@ -74,25 +77,38 @@
         <button type="submit" class="boton-principal">Reservar mesa</button>
       </form>
       <div id="confirmacion-reserva" class="confirmacion" hidden></div>
+      <!-- Solo la vista de personal (?sala) muestra esta lista:
+           los QR de las mesas abren la vista de cliente, sin ella. -->
+      <div id="bloque-reservas-recibidas" hidden>
+        <h3>Reservas recibidas</h3>
+        <p class="ayuda">Zona del personal de sala: aquí llegan las reservas de los clientes.</p>
+        <div id="lista-reservas-sala"></div>
+      </div>
     </section>
 
-    <!-- ===== 5. COCINA (vista del personal) ===== -->
+    <!-- ===== 5. COMANDAS DE SALA (vista del personal, ?sala) ===== -->
+    <section id="seccion-comandas" class="seccion">
+      <h2>Comandas</h2>
+      <p class="ayuda">Las mesas en tiempo real: cuando cocina marca una comanda como lista, aquí aparece el aviso.</p>
+      <div id="lista-comandas-sala"></div>
+    </section>
+
+    <!-- ===== 6. COCINA (vista del personal) ===== -->
     <section id="seccion-cocina" class="seccion">
       <h2>Vista de cocina</h2>
-      <p class="ayuda">Pedidos y reservas en tiempo real, desde todos los móviles.</p>
+      <p class="ayuda">Comandas en tiempo real, desde todos los móviles.</p>
       <div id="lista-cocina"></div>
-      <h3>Reservas</h3>
-      <div id="lista-reservas-cocina"></div>
       <button id="boton-borrar-demo" class="boton-secundario">Borrar datos de la demo</button>
     </section>
 
   </main>
 
-  <!-- ===== 6. NAVEGACIÓN INFERIOR ===== -->
+  <!-- ===== 7. NAVEGACIÓN INFERIOR ===== -->
   <nav class="navegacion">
     <button class="boton-nav activo" data-seccion="carta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 21V5"/></svg>Carta</button>
     <button class="boton-nav" data-seccion="pedido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8a3 3 0 016 0"/></svg>Pedido<i id="contador-pedido" hidden>0</i></button>
     <button class="boton-nav" data-seccion="reservas"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Reservas</button>
+    <button class="boton-nav" data-seccion="comandas" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Comandas<i id="contador-comandas" hidden>0</i></button>
     <button class="boton-nav" data-seccion="cocina"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14a4 4 0 01-1-7.8 4.5 4.5 0 018.6-1A4 4 0 0117 14v5H7z"/><path d="M7 17h10"/></svg>Cocina<i id="contador-cocina" hidden>0</i></button>
   </nav>
 
