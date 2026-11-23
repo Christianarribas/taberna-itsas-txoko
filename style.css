@@ -336,6 +336,20 @@ h3 { font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-pr
   font-size: .8rem;
 }
 
+/* Aviso cuando la página se abre dentro del navegador de otra app
+   (WhatsApp, Instagram…): ese navegador no guarda la sesión */
+.aviso-navegador-app {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  background: var(--color-dorado);
+  color: #fff;
+  padding: 12px 16px;
+  font-size: .9rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 /* Aviso de error flotante (fallos de conexión del personal) */
 #aviso-error {
   position: fixed;
