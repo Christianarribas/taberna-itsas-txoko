@@ -114,6 +114,15 @@ async function fetchNube(camino, opciones = {}) {
     error.estado = 0;
     throw error;
   }
+  /* Un 401/403 teniendo sesión NO pide la contraseña en pleno servicio:
+     se renueva la credencial en silencio y se repite la llamada UNA vez.
+     Solo si la credencial está invalidada de verdad (tokenDelPersonal
+     cierra la sesión) hará falta entrar otra vez, ya fuera del servicio. */
+  if (!respuesta.ok && (respuesta.status === 401 || respuesta.status === 403) && sesion && !opciones._reintentado) {
+    let renovado = null;
+    try { renovado = await tokenDelPersonal(true); } catch (e) { renovado = null; }
+    if (renovado) return fetchNube(camino, { ...opciones, _reintentado: true });
+  }
   if (!respuesta.ok) {
     const error = new Error("la nube respondió " + respuesta.status);
     error.estado = respuesta.status;
@@ -252,9 +261,9 @@ async function iniciarSesion(correo, contrasena) {
    Importante: un fallo pasajero (sin cobertura, servicio ocupado) NO debe
    borrar la sesión; solo se cierra si la credencial quedó inválida de
    verdad. Así el personal no tiene que meter la contraseña a cada rato. */
-async function tokenDelPersonal() {
+async function tokenDelPersonal(forzar) {
   if (!modoNube || !sesion || !claveApi) return null;
-  if (Date.now() < sesion.caduca) return sesion.idToken;
+  if (!forzar && Date.now() < sesion.caduca) return sesion.idToken;
   let respuesta;
   try {
     respuesta = await fetch(`https://securetoken.googleapis.com/v1/token?key=${claveApi}`, {
@@ -300,6 +309,78 @@ function cerrarSesion() {
    conserva bien (ver #aviso-navegador-app). */
 function esNavegadorDeUnaApp() {
   return /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Telegram|TikTok|Snapchat|Line\//i.test(navigator.userAgent || "");
+}
+
+/* Errores 401/403 con sesión viva: NO se interrumpe el servicio pidiendo
+   la contraseña (fetchNube ya renovó y reintentó en silencio). Se avisa
+   como mucho una vez por minuto. Solo SIN sesión aparece el panel de
+   entrada, pensado para usarse una vez al preparar el dispositivo. */
+let ultimoAvisoAcceso = 0;
+function gestionarErrorServicio(e, mensaje) {
+  if (e && (e.estado === 401 || e.estado === 403)) {
+    if (!sesion) { mostrarAcceso(); return; }
+    if (Date.now() - ultimoAvisoAcceso < 60000) return;
+    ultimoAvisoAcceso = Date.now();
+    avisarError("Fallo puntual de acceso; se reintenta solo. Si se repite mucho, entra de nuevo al terminar el servicio.");
+    return;
+  }
+  avisarError(mensaje);
+}
+
+/* Aviso verde breve en la parte baja (confirmaciones del personal) */
+function avisarOk(texto) {
+  let caja = el("aviso-ok");
+  if (!caja) {
+    caja = document.createElement("div");
+    caja.id = "aviso-ok";
+    document.body.appendChild(caja);
+  }
+  caja.textContent = texto;
+  caja.hidden = false;
+  clearTimeout(caja._temporizador);
+  caja._temporizador = setTimeout(() => { caja.hidden = true; }, 4000);
+}
+
+/* 3b. NOMBRE DEL CAMARERO (apartado TURNO) ------------------------------
+   Cada camarero elige su nombre UNA vez al preparar el dispositivo y la
+   app lo recuerda: sale en las comandas que anota desde la vista de sala
+   y en las reservas que acepta o rechaza. No es otra cuenta: la cuenta
+   de sala la comparte el equipo; el nombre dice QUIÉN llevó cada cosa.
+   Se guarda solo en este dispositivo (localStorage). */
+function nombreCamarero() {
+  try { return localStorage.getItem("nombreCamarero") || ""; }
+  catch (e) { return ""; }
+}
+
+function pintarTurno() {
+  const nombre = nombreCamarero();
+  document.querySelectorAll(".turno-nombre-actual").forEach((n) => {
+    n.textContent = nombre || "nadie todavía";
+  });
+  const entrada = el("turno-nombre");
+  if (nombre && entrada && !entrada.value) entrada.value = nombre;
+  /* Nombres usados antes en este dispositivo, para elegir sin escribir */
+  let nombres = [];
+  try { nombres = JSON.parse(localStorage.getItem("nombresCamareros") || "[]"); }
+  catch (e) { nombres = []; }
+  const lista = el("turno-nombres");
+  if (lista) lista.innerHTML = nombres.map((n) => `<option value="${limpiar(n)}"></option>`).join("");
+}
+
+function guardarTurno(evento) {
+  evento.preventDefault();
+  const nombre = el("turno-nombre").value.trim().slice(0, 40);
+  if (!nombre) return;
+  try {
+    localStorage.setItem("nombreCamarero", nombre);
+    const nombres = JSON.parse(localStorage.getItem("nombresCamareros") || "[]");
+    if (!nombres.includes(nombre)) {
+      nombres.push(nombre);
+      localStorage.setItem("nombresCamareros", JSON.stringify(nombres.slice(-8)));
+    }
+  } catch (e) {}
+  pintarTurno();
+  avisarOk(`Listo: lo que anotes saldrá a nombre de ${nombre}.`);
 }
 
 /* Panel de entrada del personal: se muestra encima cuando hace falta */
@@ -535,6 +616,11 @@ async function enviarPedido() {
       return linea;
     })
   };
+  /* Desde la vista de sala, la comanda sale con el nombre elegido en
+     Turno: cocina y sala ven quién la anotó. Las de los clientes (QR)
+     no llevan nombre de camarero. */
+  const camarero = document.body.classList.contains("vista-sala") ? nombreCamarero() : "";
+  if (camarero) pedido.camarero = camarero;
   pedido.firma = firmaDe(pedido, envioPedido.sal);
   let guardado = false;
   try {
@@ -613,6 +699,7 @@ function dibujarTicket(p, para) {
         <span class="ticket-hora">#${p.numero}${p.servido ? "" : ` · <b class="${tarde ? "espera-tarde" : ""}">${espera}</b>`}</span>
       </div>
       <ul>${p.platos.map((x) => `<li><b>${x.cantidad} ×</b> ${limpiar(x.nombre)}${x.nota ? `<span class="ticket-nota">${limpiar(x.nota)}</span>` : ""}</li>`).join("")}</ul>
+      ${p.camarero ? `<div class="ticket-camarero">Anotada por ${limpiar(p.camarero)}</div>` : ""}
       ${pie}
     </div>`;
 }
@@ -653,8 +740,7 @@ async function pintarCocina() {
   try {
     pintarCola(await leerColeccion("pedidos"), el("lista-cocina"), "cocina");
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) mostrarAcceso();
-    else avisarError("No se pudieron cargar las comandas. Revisa la conexión.");
+    gestionarErrorServicio(e, "No se pudieron cargar las comandas. Revisa la conexión.");
   }
   pintarContadorCocina();
 }
@@ -666,8 +752,7 @@ async function pintarComandasSala() {
   try {
     pintarCola(await leerColeccion("pedidos"), el("lista-comandas-sala"), "sala");
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) mostrarAcceso();
-    else avisarError("No se pudieron cargar las comandas. Revisa la conexión.");
+    gestionarErrorServicio(e, "No se pudieron cargar las comandas. Revisa la conexión.");
   }
   pintarContadorComandas();
 }
@@ -676,8 +761,8 @@ async function marcarListo(id) {
   try {
     await actualizarDato("pedidos", id, { listo: true });
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) { mostrarAcceso(); return; }
-    avisarError("No se pudo marcar la comanda. Inténtalo de nuevo.");
+    gestionarErrorServicio(e, "No se pudo marcar la comanda. Inténtalo de nuevo.");
+    return;
   }
   pintarCocina();
   pintarContadorComandas();
@@ -687,8 +772,8 @@ async function marcarServido(id) {
   try {
     await actualizarDato("pedidos", id, { servido: true });
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) { mostrarAcceso(); return; }
-    avisarError("No se pudo marcar la comanda. Inténtalo de nuevo.");
+    gestionarErrorServicio(e, "No se pudo marcar la comanda. Inténtalo de nuevo.");
+    return;
   }
   pintarComandasSala();
   pintarContadorComandas();
@@ -792,8 +877,7 @@ async function pintarReservas() {
   try {
     reservas = await leerColeccion("reservas");
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) { mostrarAcceso(); return; }
-    avisarError("No se pudieron cargar las reservas. Revisa la conexión.");
+    gestionarErrorServicio(e, "No se pudieron cargar las reservas. Revisa la conexión.");
     return;
   }
   if (reservas.length === 0) {
@@ -811,7 +895,7 @@ async function pintarReservas() {
              <button class="boton-aceptar" data-aceptar="${r.id}">Aceptar</button>
              <button class="boton-rechazar" data-rechazar="${r.id}">Rechazar</button>
            </div>`
-        : `<div class="reserva-estado ${r.estado === "aceptada" ? "ok" : "mal"}">${r.estado === "aceptada" ? "Aceptada" : "Rechazada"}</div>`}
+        : `<div class="reserva-estado ${r.estado === "aceptada" ? "ok" : "mal"}">${r.estado === "aceptada" ? "Aceptada" : "Rechazada"}${r.atendidaPor ? ` por ${limpiar(r.atendidaPor)}` : ""}</div>`}
     </div>`;
   let html = "";
   if (pendientes.length) {
@@ -830,10 +914,14 @@ async function pintarReservas() {
 
 async function cambiarEstadoReserva(id, estado) {
   try {
-    await actualizarDato("reservas", id, { estado });
+    const cambios = { estado };
+    /* Quién la aceptó o rechazó: el nombre elegido en el apartado Turno */
+    const camarero = nombreCamarero();
+    if (camarero) cambios.atendidaPor = camarero;
+    await actualizarDato("reservas", id, cambios);
   } catch (e) {
-    if (e.estado === 401 || e.estado === 403) { mostrarAcceso(); return; }
-    avisarError("No se pudo actualizar la reserva. Inténtalo de nuevo.");
+    gestionarErrorServicio(e, "No se pudo actualizar la reserva. Inténtalo de nuevo.");
+    return;
   }
   pintarReservas();
 }
@@ -875,6 +963,7 @@ function iniciar() {
   el("formulario-reserva").addEventListener("submit", guardarReserva);
   el("reserva-dia").addEventListener("change", pintarHorasReserva);
   el("formulario-acceso").addEventListener("submit", enviarAcceso);
+  el("formulario-turno").addEventListener("submit", guardarTurno);
   el("boton-volver-acceso").addEventListener("click", () => { seccionPendiente = null; el("acceso-personal").hidden = true; });
   el("boton-cerrar-sesion").addEventListener("click", cerrarSesion);
   /* El botón de borrar datos solo existe en MODO LOCAL. En la nube los
@@ -922,6 +1011,7 @@ function iniciar() {
       document.body.classList.add("vista-sala");
       el("bloque-reservas-recibidas").hidden = false;
       document.querySelector('[data-seccion="comandas"]').hidden = false;
+      document.querySelector('[data-seccion="turno"]').hidden = false;
     }
   }
 
@@ -938,6 +1028,7 @@ function iniciar() {
   /* Si hay sesión del personal (este móvil ya entró otra vez), conectamos
      los avisos en tiempo real; si no, se conectarán al entrar. */
   if (sesion || !modoNube) arrancarPersonal();
+  pintarTurno(); // enseña el nombre de turno elegido en este dispositivo, si lo hay
 
   pintarFiltros();
   pintarCarta();
