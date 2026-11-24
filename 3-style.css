@@ -1,0 +1,408 @@
+/* =====================================================
+   HOJA DE ESTILOS · Taberna Itsas Txoko (demo)
+   ÍNDICE
+   1. Colores, tipografías y variables
+   2. Base
+   3. Cabecera
+   4. Carta
+   5. Pedido
+   6. Formularios y reservas
+   7. Cocina
+   8. Navegación inferior
+   9. Pantallas grandes
+   ===================================================== */
+
+/* 1. COLORES, TIPOGRAFÍAS Y VARIABLES: cambia aquí el estilo de todo el bar */
+:root {
+  --color-fondo: #f6f0e4;       /* crema, como papel de carta */
+  --color-tarjeta: #fffdf8;
+  --color-principal: #14262e;   /* azul noche del Cantábrico */
+  --color-acento: #8c2a35;      /* granate, tono de vino de Rioja */
+  --color-dorado: #b98d3e;      /* dorado apagado */
+  --color-texto: #26302f;
+  --color-suave: #7b776b;
+  --color-linea: #e4dac5;
+  --color-ok: #3d7a5a;
+  --radio: 14px;
+  --sombra: 0 2px 10px rgba(20, 38, 46, .08);
+  /* Si Google Fonts no carga, se usa Georgia / la fuente del sistema */
+  --fuente-titulo: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --fuente-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 2. BASE */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; } /* para que "hidden" siempre oculte */
+body {
+  font-family: var(--fuente-texto);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  padding-bottom: 88px; /* hueco para la navegación inferior */
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+button, select, input { font-family: inherit; }
+main { padding: 20px 16px; }
+h2 { font-family: var(--fuente-titulo); font-size: 2rem; font-weight: 700; color: var(--color-principal); margin-bottom: 4px; line-height: 1.1; }
+h3 { font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-principal); margin: 26px 0 10px; }
+.ayuda { color: var(--color-suave); font-size: .9rem; margin-bottom: 16px; }
+.seccion { display: none; }
+.seccion.activa { display: block; animation: aparecer .3s ease; }
+@keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 3. CABECERA */
+.cabecera {
+  background: var(--color-principal);
+  color: #f6f0e4;
+  padding: 22px 16px 16px;
+  border-bottom: 3px solid var(--color-dorado);
+}
+.cabecera-titulo { display: flex; align-items: center; gap: 14px; }
+.cabecera-icono {
+  font-family: var(--fuente-titulo); font-size: 1.5rem; font-weight: 700; letter-spacing: 1px;
+  color: var(--color-dorado); border: 1.5px solid var(--color-dorado);
+  width: 54px; height: 54px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.cabecera h1 { font-family: var(--fuente-titulo); font-size: 1.85rem; font-weight: 700; line-height: 1; letter-spacing: .3px; }
+.cabecera-lema { font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; color: var(--color-dorado); margin-top: 6px; }
+.selector-mesa {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+  padding: 8px 12px; border-radius: 10px; font-size: .82rem;
+}
+.selector-mesa select {
+  font-size: .95rem; font-weight: 600; padding: 5px 10px;
+  border-radius: 8px; border: none; background: var(--color-fondo); color: var(--color-principal);
+}
+
+/* 4. CARTA */
+.filtros { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 14px; scrollbar-width: none; }
+.filtros::-webkit-scrollbar { display: none; }
+.filtro {
+  border: 1px solid var(--color-linea); background: var(--color-tarjeta);
+  color: var(--color-principal); padding: 8px 16px; border-radius: 99px;
+  font-weight: 500; white-space: nowrap; font-size: .88rem;
+}
+.filtro.activo { background: var(--color-principal); border-color: var(--color-principal); color: #f6f0e4; }
+.lista-carta { display: grid; gap: 10px; }
+.plato {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--color-tarjeta); padding: 12px;
+  border-radius: var(--radio); box-shadow: var(--sombra); border: 1px solid var(--color-linea);
+}
+.plato-foto {
+  width: 62px; height: 62px; flex-shrink: 0; display: grid; place-items: center;
+  border-radius: 12px; background: var(--color-principal);
+}
+.plato-foto svg, .boton-nav svg {
+  fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.plato-foto svg { width: 30px; height: 30px; color: var(--color-dorado); }
+.plato-info { flex: 1; }
+.plato-nombre { font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.2rem; line-height: 1.15; color: var(--color-principal); }
+.plato-descripcion { font-size: .78rem; color: var(--color-suave); margin: 2px 0 5px; }
+.plato-precio { font-weight: 600; font-size: .95rem; color: var(--color-acento); font-variant-numeric: tabular-nums; }
+.boton-anadir {
+  width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid var(--color-acento);
+  background: transparent; color: var(--color-acento); font-size: 1.5rem; line-height: 1;
+  transition: background .15s, color .15s;
+}
+.boton-anadir:active { background: var(--color-acento); color: #fff; transform: scale(.94); }
+
+/* 5. PEDIDO */
+.tipo-pedido { display: flex; gap: 8px; margin: 14px 0 16px; }
+.boton-tipo {
+  flex: 1; padding: 11px; border-radius: 10px; font-weight: 500; font-size: .92rem;
+  border: 1px solid var(--color-linea); background: var(--color-tarjeta); color: var(--color-texto);
+}
+.boton-tipo.activo { border-color: var(--color-principal); background: var(--color-principal); color: #f6f0e4; }
+.linea-pedido {
+  display: flex; align-items: center; gap: 10px; background: var(--color-tarjeta);
+  padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--color-linea);
+}
+.linea-nombre { flex: 1; font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.15rem; line-height: 1.15; color: var(--color-principal); }
+.linea-nombre small { display: block; font-family: var(--fuente-texto); color: var(--color-suave); font-weight: 400; font-size: .75rem; margin-top: 2px; }
+.cantidad { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.cantidad button {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--color-principal);
+  background: transparent; color: var(--color-principal); font-weight: 600; font-size: 1rem;
+}
+.boton-quitar { border: none; background: none; color: var(--color-suave); font-size: .75rem; text-decoration: underline; }
+.total-caja {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 18px 0; padding: 16px 4px 0; border-top: 1px solid var(--color-linea);
+  font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-principal);
+}
+.total-caja strong { font-size: 2rem; color: var(--color-acento); font-variant-numeric: tabular-nums; }
+.vacio { text-align: center; color: var(--color-suave); padding: 30px 10px; font-size: .95rem; }
+.boton-principal {
+  width: 100%; padding: 15px; border: none; border-radius: 12px;
+  background: var(--color-acento); color: #fff; font-size: 1rem; font-weight: 600; letter-spacing: .3px;
+  box-shadow: 0 6px 14px rgba(140,42,53,.25);
+}
+.boton-principal:active { transform: scale(.99); }
+.boton-secundario {
+  margin-top: 26px; width: 100%; padding: 12px; border-radius: 12px; font-size: .9rem;
+  border: 1px solid var(--color-linea); background: transparent; color: var(--color-suave); font-weight: 500;
+}
+.mensaje, .confirmacion {
+  margin-top: 16px; padding: 14px; border-radius: 12px; font-size: .92rem;
+  background: #e6f0e9; color: #2c5d43; text-align: center; border: 1px solid #c9dfd0;
+}
+
+/* 6. FORMULARIOS Y RESERVAS */
+.formulario { display: grid; gap: 14px; }
+.formulario label { display: grid; gap: 6px; font-weight: 600; font-size: .8rem; letter-spacing: .5px; text-transform: uppercase; color: var(--color-principal); }
+.formulario input, .formulario select {
+  padding: 13px; font-size: 1rem; border-radius: 10px; text-transform: none; letter-spacing: 0;
+  border: 1px solid var(--color-linea); background: var(--color-tarjeta); width: 100%; color: var(--color-texto);
+}
+.formulario input:focus, .formulario select:focus { outline: 2px solid var(--color-dorado); outline-offset: 1px; }
+.fila-doble { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* 7. COCINA */
+.ticket {
+  background: var(--color-tarjeta); border-radius: var(--radio); padding: 14px; margin-bottom: 12px;
+  border: 1px solid var(--color-linea); border-left: 5px solid var(--color-dorado); box-shadow: var(--sombra);
+}
+.ticket.servido { border-left-color: var(--color-ok); opacity: .65; }
+.ticket-cabecera { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ticket-mesa { font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.4rem; color: var(--color-principal); }
+.ticket-hora { color: var(--color-suave); font-size: .8rem; }
+.ticket ul { list-style: none; margin-bottom: 12px; }
+.ticket li { padding: 4px 0; border-bottom: 1px dashed var(--color-linea); font-size: .95rem; }
+.boton-servido {
+  width: 100%; padding: 11px; border: none; border-radius: 10px;
+  background: var(--color-ok); color: #fff; font-weight: 600;
+}
+.texto-servido { color: var(--color-ok); }
+.texto-listo { color: var(--color-ok); display: block; margin-top: 6px; font-size: .82rem; }
+.texto-encocina { color: var(--color-suave); font-size: .85rem; }
+.etiqueta-llevar {
+  background: var(--color-acento); color: #fff; font-family: var(--fuente-texto);
+  font-size: .62rem; letter-spacing: 1px; padding: 3px 8px; border-radius: 99px; margin-left: 8px; vertical-align: middle;
+}
+.reserva-tarjeta { background: var(--color-tarjeta); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--color-linea); font-size: .92rem; }
+
+/* 8. NAVEGACIÓN INFERIOR */
+.navegacion {
+  position: fixed; bottom: 0; left: 0; right: 0; max-width: 560px; margin: 0 auto;
+  display: flex; background: var(--color-principal); padding: 8px 4px 12px;
+}
+.boton-nav {
+  flex: 1; border: none; background: none; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; font-size: .68rem; letter-spacing: .5px; color: #9aa7a9;
+  font-weight: 500; position: relative; padding: 4px 0;
+}
+.boton-nav svg { width: 24px; height: 24px; }
+.boton-nav.activo { color: var(--color-dorado); }
+.boton-nav i {
+  position: absolute; top: -2px; right: 24%; background: var(--color-acento); color: #fff;
+  font-style: normal; font-size: .65rem; font-weight: 600; min-width: 17px; height: 17px; border-radius: 99px;
+  display: grid; place-items: center; padding: 0 4px;
+}
+
+/* 8b. VISTAS SEPARADAS: sala y cocina
+   - En sala, app.js oculta la pestaña de cocina con "hidden".
+   - En cocina (?cocina) solo se ven las comandas: ni selector de mesa
+     ni barra de navegación. */
+.vista-cocina .selector-mesa { display: none; }
+.vista-cocina .navegacion { display: none; }
+.vista-cocina { padding-bottom: 24px; }
+
+/* 9. PANTALLAS GRANDES (ordenador): solo centramos la app */
+@media (min-width: 600px) {
+  body { box-shadow: 0 0 40px rgba(0,0,0,.12); min-height: 100vh; }
+}
+
+/* 10. NOVEDADES: acceso del personal, cola de trabajo, notas y reservas */
+
+/* Botones desactivados mientras se envía (o sin horas libres) */
+.boton-principal:disabled {
+  opacity: .6;
+  box-shadow: none;
+  cursor: wait;
+}
+
+/* Nota por plato, dentro de cada línea del pedido */
+.linea-pedido { flex-wrap: wrap; }
+.nota-plato {
+  flex-basis: 100%;
+  margin-top: 6px;
+  padding: 9px 11px;
+  font-size: .9rem;
+  border-radius: 8px;
+  border: 1px dashed var(--color-linea);
+  background: #fbf7ec;
+  color: var(--color-texto);
+}
+.nota-plato:focus { outline: 2px solid var(--color-dorado); outline-offset: 1px; }
+
+/* La nota llega a cocina y sala destacada en el ticket */
+.ticket-nota {
+  display: block;
+  margin-top: 2px;
+  font-size: .82rem;
+  color: var(--color-acento);
+  font-style: italic;
+}
+
+/* Tiempos de espera en la cola: en rojo cuando lleva 15 min o más */
+.ticket-hora b { font-weight: 600; color: var(--color-suave); }
+.ticket-hora b.espera-tarde { color: var(--color-acento); }
+
+/* Separadores de la cola (En preparación / Listas para servir) */
+.titulo-cola {
+  font-family: var(--fuente-texto);
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-suave);
+  margin: 18px 2px 10px;
+}
+
+/* Historial plegado (servidas, reservas resueltas) */
+.historial { margin-top: 18px; }
+.historial summary {
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--color-suave);
+  padding: 8px 2px;
+}
+.historial[open] summary { margin-bottom: 10px; }
+
+/* Reservas: acciones de sala y estado */
+.reserva-acciones { display: flex; gap: 8px; margin-top: 10px; }
+.reserva-acciones button {
+  flex: 1; padding: 9px; border: none; border-radius: 9px; font-weight: 600; font-size: .88rem;
+}
+.boton-aceptar { background: var(--color-ok); color: #fff; }
+.boton-rechazar { background: transparent; color: var(--color-acento); border: 1px solid var(--color-acento) !important; }
+.reserva-estado { margin-top: 8px; font-size: .82rem; font-weight: 600; }
+.reserva-estado.ok { color: var(--color-ok); }
+.reserva-estado.mal { color: var(--color-acento); }
+
+/* Nombre del camarero: en la comanda y en el apartado Turno */
+.ticket-camarero {
+  margin-top: 6px;
+  font-size: .8rem;
+  color: var(--color-suave);
+  font-style: italic;
+}
+.turno-chip {
+  font-size: .85rem;
+  color: var(--color-suave);
+  margin: 4px 0 12px;
+}
+.turno-chip strong { color: var(--color-principal); }
+.turno-actual { margin-top: 14px; font-size: .9rem; color: var(--color-suave); }
+.turno-actual strong { color: var(--color-principal); }
+.boton-enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-acento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Aviso verde breve (confirmaciones del personal), gemelo de #aviso-error */
+#aviso-ok {
+  position: fixed;
+  left: 16px; right: 16px; bottom: 96px;
+  max-width: 528px;
+  margin: 0 auto;
+  z-index: 60;
+  background: var(--color-ok);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: .9rem;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
+.reserva-rechazada { opacity: .6; }
+
+/* Panel de acceso del personal, a pantalla completa por encima */
+.acceso-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--color-fondo);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.acceso-panel {
+  width: 100%;
+  max-width: 400px;
+  background: var(--color-tarjeta);
+  border: 1px solid var(--color-linea);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 24px 20px;
+  display: grid;
+  gap: 14px;
+}
+.acceso-panel label {
+  display: grid; gap: 6px;
+  font-weight: 600; font-size: .8rem; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--color-principal);
+}
+.acceso-panel input {
+  padding: 13px; font-size: 1rem; border-radius: 10px;
+  text-transform: none; letter-spacing: 0;
+  border: 1px solid var(--color-linea); background: #fff; width: 100%;
+}
+.mensaje-acceso {
+  margin: 0; padding: 12px; border-radius: 10px; font-size: .9rem; text-align: center;
+  background: #fde6e1; color: #a3321c; border: 1px solid #f0c4ba;
+}
+
+/* Cerrar sesión, en la cabecera (solo lo ve el personal) */
+.boton-cerrar-sesion {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: transparent;
+  color: #cbd6d8;
+  font-size: .8rem;
+}
+
+/* Aviso cuando la página se abre dentro del navegador de otra app
+   (WhatsApp, Instagram…): ese navegador no guarda la sesión */
+.aviso-navegador-app {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  background: var(--color-dorado);
+  color: #fff;
+  padding: 12px 16px;
+  font-size: .9rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Aviso de error flotante (fallos de conexión del personal) */
+#aviso-error {
+  position: fixed;
+  left: 16px; right: 16px; bottom: 96px;
+  max-width: 528px;
+  margin: 0 auto;
+  z-index: 60;
+  background: #a3321c;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: .9rem;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
