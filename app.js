@@ -1011,7 +1011,7 @@ function iniciar() {
       document.body.classList.add("vista-sala");
       el("bloque-reservas-recibidas").hidden = false;
       document.querySelector('[data-seccion="comandas"]').hidden = false;
-      document.querySelector('[data-seccion="turno"]').hidden = false;
+      document.querySelector('.boton-nav[data-seccion="turno"]').hidden = false;
     }
   }
 
