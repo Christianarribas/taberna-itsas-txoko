@@ -286,6 +286,47 @@ h3 { font-family: var(--fuente-titulo); font-size: 1.5rem; color: var(--color-pr
 .reserva-estado { margin-top: 8px; font-size: .82rem; font-weight: 600; }
 .reserva-estado.ok { color: var(--color-ok); }
 .reserva-estado.mal { color: var(--color-acento); }
+
+/* Nombre del camarero: en la comanda y en el apartado Turno */
+.ticket-camarero {
+  margin-top: 6px;
+  font-size: .8rem;
+  color: var(--color-suave);
+  font-style: italic;
+}
+.turno-chip {
+  font-size: .85rem;
+  color: var(--color-suave);
+  margin: 4px 0 12px;
+}
+.turno-chip strong { color: var(--color-principal); }
+.turno-actual { margin-top: 14px; font-size: .9rem; color: var(--color-suave); }
+.turno-actual strong { color: var(--color-principal); }
+.boton-enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-acento);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Aviso verde breve (confirmaciones del personal), gemelo de #aviso-error */
+#aviso-ok {
+  position: fixed;
+  left: 16px; right: 16px; bottom: 96px;
+  max-width: 528px;
+  margin: 0 auto;
+  z-index: 60;
+  background: var(--color-ok);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: .9rem;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
+}
 .reserva-rechazada { opacity: .6; }
 
 /* Panel de acceso del personal, a pantalla completa por encima */
